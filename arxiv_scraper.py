@@ -2,53 +2,51 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-import time
 
-def scrape_arxiv(query, max_results=50):
-    base_url = "https://arxiv.org/search/"
-    params = {
-        "query": query,
-        "searchtype": "all",
-        "abstracts": "show",
-        "order": "-announced_date_first",
-        "size": max_results
-    }
+st.set_page_config(page_title="ArXiv Search", layout="wide")
+st.title("🔍 ArXiv Paper Search")
 
-    response = requests.get(base_url, params=params)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    results = soup.find_all('li', class_='arxiv-result')
+# Text input for custom query
+query = st.text_input("Enter a search term:", "")
 
-    papers = []
-    for result in results:
-        title = result.find('p', class_='title is-5 mathjax').text.strip()
-        abstract = result.find('span', class_='abstract-full has-text-grey-dark mathjax').text.strip()
-        authors = result.find('p', class_='authors').text.replace('Authors:', '').strip()
-        date_tag = result.find('p', class_='is-size-7')
-        date = date_tag.text.strip().split(';')[0].replace('Submitted ', '') if date_tag else 'N/A'
+if query:
+    # Format the query string for the URL
+    formatted_query = query.replace(" ", "+")
+    url = f"https://arxiv.org/search/?query={formatted_query}&searchtype=all&abstracts=show&order=-announced_date_first&size=100"
 
-        papers.append({
-            'Title': title,
-            'Abstract': abstract,
-            'Authors': authors,
-            'Date': date
-        })
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, "html.parser")
+        results = soup.find_all("li", class_="arxiv-result")
 
-    return pd.DataFrame(papers)
+        data = []
+        for result in results:
+            title = result.find("p", class_="title").get_text(strip=True)
+            abstract = result.find("span", class_="abstract-full").get_text(strip=True).replace("Abstract: ", "")
+            authors = result.find("p", class_="authors").get_text(strip=True).replace("Authors:", "")
+            date = result.find("p", class_="is-size-7").get_text(strip=True).split(";")[0].replace("Submitted ", "")
 
-# Streamlit UI
-st.set_page_config(page_title="ArXiv Scraper", layout="wide")
+            data.append({
+                "Title": title,
+                "Authors": authors,
+                "Date": date,
+                "Abstract": abstract
+            })
 
-st.title("📄 ArXiv Paper Scraper")
-query = st.text_input("Enter your search query", "machine learning")
+        if data:
+            df = pd.DataFrame(data)
+            st.success(f"✅ Found {len(df)} results for '{query}'")
+            st.dataframe(df, use_container_width=True)
 
-if st.button("Scrape"):
-    with st.spinner("Scraping arXiv... Please wait..."):
-        df = scrape_arxiv(query)
-        if df.empty:
-            st.warning("No results found.")
+            # Optional: download CSV
+            csv = df.to_csv(index=False).encode("utf-8")
+            st.download_button("⬇️ Download results as CSV", csv, "arxiv_results.csv", "text/csv")
+
         else:
-            st.success(f"Found {len(df)} papers!")
-            st.dataframe(df)
-            csv = df.to_csv(index=False).encode('utf-8')
-            st.download_button("Download CSV", csv, "arxiv_results.csv", "text/csv")
+            st.warning("No results found.")
 
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+
+else:
+    st.info("Please enter a search term above to begin.")
