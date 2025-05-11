@@ -28,23 +28,19 @@ if race:
             soup = BeautifulSoup(response.content, "html.parser")
             info = {}
 
-            # Tentons de récupérer d'autres informations possibles
-            description = soup.select_one('div.description p')
-            if description:
-                info["Description"] = description.get_text(strip=True)
+            # Tenter de récupérer tous les paragraphes et informations présentes sur la page
+            paragraphs = soup.find_all('p')
+            for p in paragraphs:
+                text = p.get_text(strip=True)
+                if text:
+                    info["Texte extrait"] = text
 
-            # Récupération de l'image de la race
+            # Récupérer des informations possibles sur l'image
             image = soup.select_one('div.race-img img')
             if image and image.get('src'):
                 info["Image"] = f"https://www.woopets.fr{image['src']}"
 
-            # Recherche des caractéristiques
-            labels = soup.select("div.race-details .race-details__label")
-            values = soup.select("div.race-details .race-details__value")
-
-            for label, value in zip(labels, values):
-                info[label.get_text(strip=True)] = value.get_text(strip=True)
-
+            # Recherche des autres informations dans la page
             if info:
                 st.subheader(f"✨ Détails pour **{race.capitalize()}**")
                 for key, val in info.items():
