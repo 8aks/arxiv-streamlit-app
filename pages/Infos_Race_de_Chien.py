@@ -28,29 +28,31 @@ if race:
             soup = BeautifulSoup(response.content, "html.parser")
             info = {}
 
-            # Extracting relevant text elements only
-            paragraphs = soup.find_all('p', text=True)
-            filtered_text = []
-            for p in paragraphs:
-                # Clean and strip text from unnecessary whitespace
-                text = p.get_text(strip=True)
-                # Only keep paragraphs with some content
-                if text:
-                    filtered_text.append(text)
-            
-            # If relevant text was found, display it
-            if filtered_text:
-                st.subheader(f"✨ Détails pour **{race.capitalize()}**")
-                for text in filtered_text:
-                    st.write(f"- {text}")
-            else:
-                st.warning("Page trouvée, mais aucune information détaillée n'a pu être extraite.")
+            # Extract the breed description from paragraphs
+            description = soup.find('div', class_='race-desc')
+            if description:
+                description_text = description.get_text(strip=True)
+                if description_text:
+                    st.subheader(f"✨ Détails pour **{race.capitalize()}**")
+                    st.write(f"- {description_text}")
 
-            # Attempt to extract the breed image
+            # Extract price and maintenance cost if present
+            price_section = soup.find('div', class_='price')
+            if price_section:
+                price_text = price_section.get_text(strip=True)
+                st.write(f"- **Prix d'achat**: {price_text}")
+
+            # Extract breed image
             image = soup.select_one('div.race-img img')
             if image and image.get('src'):
                 info["Image"] = f"https://www.woopets.fr{image['src']}"
                 st.image(info["Image"], caption=f"Image de {race.capitalize()}", width=300)
+
+            # Extract similar breeds if present
+            similar_breeds_section = soup.find('div', class_='similar-breeds')
+            if similar_breeds_section:
+                similar_breeds = similar_breeds_section.get_text(strip=True)
+                st.write(f"- **Races similaires**: {similar_breeds}")
 
             break
 
