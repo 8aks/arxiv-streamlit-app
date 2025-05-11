@@ -7,34 +7,37 @@ st.title("🐶 Informations sur une race de chien")
 
 race = st.text_input("Entrez le nom de la race (ex : ariegeois, berger allemand, bichon frisé) :").strip()
 
-if race:
-    # Nettoyer l'entrée pour l'URL
-    url_friendly = race.lower().replace(" ", "-") \
+def slugify(text):
+    return text.lower().replace(" ", "-") \
         .replace("é", "e").replace("è", "e").replace("ê", "e") \
         .replace("à", "a").replace("â", "a").replace("î", "i") \
         .replace("ç", "c").replace("ô", "o").replace("ù", "u")
 
-    url = f"https://www.woopets.fr/chien/races/{url_friendly}/"
-    response = requests.get(url)
+if race:
+    slug = slugify(race)
+    urls = [
+        f"https://www.woopets.fr/chien/races/{slug}/",
+        f"https://www.woopets.fr/chien/race/{slug}/"
+    ]
 
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.content, "html.parser")
-        info = {}
-        details_section = soup.select("div.race-details")
-
-        if details_section:
+    page_found = False
+    for url in urls:
+        response = requests.get(url)
+        if response.status_code == 200:
+            page_found = True
+            soup = BeautifulSoup(response.content, "html.parser")
             labels = soup.select("div.race-details .race-details__label")
             values = soup.select("div.race-details .race-details__value")
 
-            for label, value in zip(labels, values):
-                info[label.get_text(strip=True)] = value.get_text(strip=True)
+            if labels and values:
+                st.subheader(f"✨ Détails pour **{race.capitalize()}**")
+                for label, value in zip(labels, values):
+                    st.write(f"**{label.get_text(strip=True)}** : {value.get_text(strip=True)}")
+            else:
+                st.warning("Page trouvée, mais les détails sont introuvables.")
+            break
 
-            st.subheader(f"✨ Détails pour **{race.capitalize()}**")
-            for key, val in info.items():
-                st.write(f"**{key}** : {val}")
-        else:
-            st.warning(f"La page a été trouvée, mais aucune information détaillée n'a pu être extraite pour **{race}**.")
-    else:
-        st.error(f"❌ Impossible de trouver une page pour '{race}'. Vérifiez le nom ou essayez une autre orthographe.")
+    if not page_found:
+        st.error(f"❌ Impossible de trouver une page pour '{race}'. Vérifiez le nom.")
 else:
     st.info("Veuillez entrer une race pour afficher les informations.")
