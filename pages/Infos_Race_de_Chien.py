@@ -26,15 +26,32 @@ if race:
         if response.status_code == 200:
             page_found = True
             soup = BeautifulSoup(response.content, "html.parser")
+            info = {}
+
+            # Tentons de récupérer d'autres informations possibles
+            description = soup.select_one('div.description p')
+            if description:
+                info["Description"] = description.get_text(strip=True)
+
+            # Récupération de l'image de la race
+            image = soup.select_one('div.race-img img')
+            if image and image.get('src'):
+                info["Image"] = f"https://www.woopets.fr{image['src']}"
+
+            # Recherche des caractéristiques
             labels = soup.select("div.race-details .race-details__label")
             values = soup.select("div.race-details .race-details__value")
 
-            if labels and values:
+            for label, value in zip(labels, values):
+                info[label.get_text(strip=True)] = value.get_text(strip=True)
+
+            if info:
                 st.subheader(f"✨ Détails pour **{race.capitalize()}**")
-                for label, value in zip(labels, values):
-                    st.write(f"**{label.get_text(strip=True)}** : {value.get_text(strip=True)}")
+                for key, val in info.items():
+                    st.write(f"**{key}** : {val}")
             else:
-                st.warning("Page trouvée, mais les détails sont introuvables.")
+                st.warning("Page trouvée, mais aucune information détaillée n'a pu être extraite.")
+
             break
 
     if not page_found:
