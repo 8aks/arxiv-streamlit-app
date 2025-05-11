@@ -20,16 +20,21 @@ if race:
     if response.status_code == 200:
         soup = BeautifulSoup(response.content, "html.parser")
         info = {}
-        labels = soup.select("div.race-details .race-details__label")
-        values = soup.select("div.race-details .race-details__value")
+        details_section = soup.select("div.race-details")
 
-        for label, value in zip(labels, values):
-            info[label.get_text(strip=True)] = value.get_text(strip=True)
+        if details_section:
+            labels = soup.select("div.race-details .race-details__label")
+            values = soup.select("div.race-details .race-details__value")
 
-        st.subheader(f"✨ Détails pour **{race.capitalize()}**")
-        for key, val in info.items():
-            st.write(f"**{key}** : {val}")
+            for label, value in zip(labels, values):
+                info[label.get_text(strip=True)] = value.get_text(strip=True)
+
+            st.subheader(f"✨ Détails pour **{race.capitalize()}**")
+            for key, val in info.items():
+                st.write(f"**{key}** : {val}")
+        else:
+            st.warning(f"La page a été trouvée, mais aucune information détaillée n'a pu être extraite pour **{race}**.")
     else:
-        st.error(f"❌ Impossible de trouver des données pour '{race}'. Vérifiez le nom ou essayez une autre orthographe.")
+        st.error(f"❌ Impossible de trouver une page pour '{race}'. Vérifiez le nom ou essayez une autre orthographe.")
 else:
     st.info("Veuillez entrer une race pour afficher les informations.")
